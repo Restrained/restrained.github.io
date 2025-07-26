@@ -1,0 +1,228 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimal-ui">
+    <title>Jiding Zhang</title>
+    <link rel="stylesheet" href="github-markdown.css">
+    <style>
+      body {
+        box-sizing: border-box;
+        min-width: 200px;
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 45px;
+      }
+    </style>
+  </head>
+  <body>
+    <article class="markdown-body">
+      <p align="center">
+        <h3>Useful Commands for HPC (NYU Shanghai, Pudong Campus)</h3>
+      </p>
+
+
+
+
+<br>
+
+<div >
+   <p>The official documentation: <a href="https://github.com/michael-qi/nyush_hpc"><tt>https://github.com/michael-qi/nyush_hpc</tt></a></p>
+</div>
+
+<br>
+
+<div >
+   <p><b>Creating Virtual Environment</b></p>
+  
+<pre>
+<code>
+## load anaconda
+$ module load anaconda3/5.2.0
+## create virtual environment
+$ conda create -n myEnv python=3.7 anaconda
+## activate
+$ source activate myEnv
+## install packages
+$ conda install -n myEnv [package]
+</code>
+</pre>
+</div>
+
+Create the file runScript.sh:
+<pre>
+<code>
+#!/bin/bash
+
+#SBATCH --time=120:00:00
+#SBATCH --job-name=JobName
+#SBATCH --output=slurm_%j.out
+
+module purge
+module load anaconda3/5.2.0
+module load python/gnu/3.7.3
+source activate myEnv
+python myScript.py 
+</code>
+</pre>
+
+Submit using:
+<pre>
+<code>
+$ sbatch runScript.sh
+</code>
+</pre>
+
+Deactivate and delete a no longer needed virtual environment:
+<pre>
+<code>
+$ source deactivate
+$ conda remove -n myEnv -all
+</code>
+</pre>
+
+
+<div >
+   <p><b>Array Jobs with Python</b></p>
+  
+  <p>Running the same code with different parameters as inputs: Suppose the parameter space is 3-dimensional and each dimension has 2 possible values. We need to run 8 scripts in parallel.</p>
+
+  Create the python file myScript.py:
+<pre>
+<code>
+import sys
+import numpy as np
+    
+Task_ID = int(sys.argv[1])
+
+# this is equivalent to Matlab's ind2sub
+ind = np.unravel_index(Task_ID-1, [2, 2, 2], 'F')
+ind_x = ind[0]
+ind_y = ind[1]
+ind_z = ind[2]
+
+# some code to assign parameter values to different ind_x, ind_y, ind_z values
+# also do the computation
+
+
+# collect output
+with open("result.txt", "a+") as text_file:
+    text_file.write("x: %s, y: %s, z: %s, result: %s \n" %(x, y, z, result))
+
+</code>
+</pre>
+
+In the bash file:
+
+<pre>
+<code>
+#!/bin/bash
+
+#SBATCH --time=120:00:00
+#SBATCH --job-name=JobName
+#SBATCH --output=slurm_%j.out
+#SBATCH --array=1-8
+
+python myScript.py $SLURM_ARRAY_TASK_ID
+</code>
+</pre>
+</div>
+
+
+
+<div >
+   <p><b>Using Jupyter Lab</b></p>
+  
+  <p>First create a virtual enviroment (with installed libraries). Then create the bash file jupyter.sh (request 1 GPU):</p>
+<pre>
+<code>
+#!/bin/bash
+
+#SBATCH --partition=aquila
+#SBATCH --nodelist=agpu1
+#SBATCH --gres=gpu:1
+#SBATCH --job-name jupyter
+#SBATCH --output jupyter-log.txt
+#SBATCH --time=120:00:00
+#SBATCH --mem=80GB
+
+module purge
+module load python/gnu/3.7.3
+module load anaconda3/5.2.0
+source activate myEnv
+
+
+XDG_RUNTIME_DIR=""
+ipnport=$(shuf -i8000-9999 -n1)
+ipnip=$(hostname -i)
+
+echo -e "\n"
+echo    "  Paste ssh command in a terminal on local host (i.e., laptop)"
+echo    "  ------------------------------------------------------------"
+echo -e "  ssh -N -L $ipnport:$ipnip:$ipnport $USER@hpc.shanghai.nyu.edu\n"
+echo    "  Open this address in a browser on local host; see token below"
+echo    "  ------------------------------------------------------------"
+echo -e "  localhost:$ipnport                                      \n\n"
+
+jupyter-lab --no-browser --port=$ipnport --ip=$ipnip
+</code>
+</pre>
+and submit using
+<pre>
+<code>
+$ sbatch jupyter.sh
+$ cat jupyter-log.txt
+</code>
+</pre>
+Then open another ssh terminal and paste the line in jupyter-log.txt that is similar to:
+<pre>
+<code>
+$ ssh -N -L $ipnport:$ipnip:$ipnport $USER@hpc.shanghai.nyu.edu
+</code>
+</pre>
+Finally, open a browser with the following address:
+<pre>
+<code>
+localhost:$ipnport
+</code>
+</pre>
+</div>
+
+
+
+<div >
+   <p><b>Installing R packages</b></p>
+  
+  <p>In the shell:</p>
+
+<pre>
+<code>
+$ module load R/gnu/3.6.3
+$ R
+> install.packages("myPackage")
+</code>
+</pre>
+and answer "yes".
+</div>
+
+
+
+<br>
+<br>
+
+
+<div >
+   <a href="./index.html">back to homepage</a>
+</div>
+
+<br>
+
+<div id="footer" ALIGN="Middle">
+<p><a href="mailto:jiding.zhang@asu.edu"><img src="./figures/mail.svg" width="20"/></a></p>
+</div>
+
+
+
+    </article>
+  </body>
+</html>
